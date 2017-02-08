@@ -1,5 +1,5 @@
 .bottom_menu {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   text-align: center;
   width: 100%;
@@ -37,11 +37,21 @@
   text-align: center;
   padding: 3%;
   background: lightblue;
-  width: 100%;
+  width: 95%;
 }
 
 .search_bar{
   width: 85%;
   padding: 3%;
   border: solid black;
+}
+
+.search_result_entry {
+  padding: 2%;
+  border: solid black;
+  margin: 2%;
+}
+
+.loading {
+  background-color: green;
 }

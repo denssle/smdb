@@ -9,57 +9,40 @@ var Search = React.createClass({
       searching: false,
       searching_title: "",
       original_title: "",
-      search_result: null
+      search_result: null,
+      page: 1
     };
 },
   handleInputChange: function(evt) {
     console.log("TEXT", evt.target.value);
     var text = evt.target.value,
     searching_title=text.replace(/ /g,"+");
-    if(text.length > 3) {
-      this.requestMDB(searching_title);
-      this.setState({
-        searching: true,
-        searching_title: searching_title,
-        original_title: text,
-        search_result: null
-      });
-    } else {
-      this.setState({
-        searching: false,
-        searching_title: searching_title,
-        original_title: text,
-        search_result: null,
-      });
-    }
+    this.requestMovies(searching_title, this.state.page);
+    this.setState({
+      searching: true,
+      searching_title: searching_title,
+      original_title: text,
+      search_result: null
+    });
   },
-  requestMDB: function(title) {
-    var xhr = new XMLHttpRequest(),
-    url = 'www.omdbapi.com/?t='+title+'&y=&plot=short&r=json',
-    proxy = "http://cors-anywhere.herokuapp.com/" + url,
+  requestMovies: function(title, page) {
+    var url = 'www.omdbapi.com/?s='+title+'&r=json&page='+page,
     _this = this;
-
-    xhr.open('GET', proxy+url, true);
-    xhr.send();
-    console.log("request: ", title);
-    xhr.addEventListener("readystatechange", processRequest, false);
-    function processRequest(e) {
-      if(e.srcElement.readyState === 4) {
-        var response = JSON.parse(e.srcElement.response);
-        console.log("response for: " + title, _this.state.searching_title, response);
-        if(title === _this.state.searching_title && response.Title) {
+    requestMDB(url)
+    .then(function(response) {
+        if(title === _this.state.searching_title) {
           _this.setState({
             searching: false,
             search_result: response
           });
-        } else if (response.Error) {
-          console.warn("Error", response.Error);
-          _this.setState({
-            searching: false
-          });
         }
       }
-    };
+    )
+    .catch(function(){
+      _this.setState({
+        searching: false
+      });
+    })
   },
   render: function() {
     return (
@@ -67,7 +50,7 @@ var Search = React.createClass({
         <form className="search_bar_form">
           <input type="text" onChange={this.handleInputChange} className="search_bar"/>
         </form>
-        <SearchResult
+        <SearchResultList
           searching={this.state.searching}
           original_title = {this.state.original_title}
           search_result={this.state.search_result} />
@@ -76,23 +59,103 @@ var Search = React.createClass({
   }
 });
 
-var SearchResult = React.createClass({
-  render: function() {
-    var text = "",
-    title = this.props.original_title,
-    result = this.props.search_result;
+var SearchResultList = React.createClass({
+  createSearchEntries: function() {
+    if(this.props.search_result !== null) {
+      var result = this.props.search_result,
+      result_list = result.Search
+      search_list = [];
+      for(var i = 0; i < result_list.length; i++) {
+        search_list.push(<SearchResultEntry key={result_list[i].imdbID} movie={result_list[i]}/>);
+      }
+      return search_list
+    } else {
+      return null;
+    }
+  },
+  createTitle: function() {
+    var text = "...",
+    result = this.props.search_result,
+    title = this.props.original_title;
+
     if(this.props.searching) {
       text = "searching";
     }
     if(title && !result) {
       text = "searching for " + title;
     }
-    if(title && result) {
-      text = "for " +  title + " we found: " + result.Title;
-    }
+    return text;
+  },
+  render: function() {
     return (
-      <div className="search_result"><h1>{text}</h1></div>
+      <div className="search_result">
+        <div>{this.createTitle()}</div>
+        <div>{this.createSearchEntries()}</div>
+      </div>
     )
+  }
+});
+
+var SearchResultEntry = React.createClass({
+  /* movie, Poster, Title, Type, Year, imdbID
+  */
+  getInitialState: function(){
+    return {
+      showDetails: false,
+      loading: false,
+      additionalDetails: null
+    };
+  },
+  onClick: function() {
+    if(!this.state.loading) {
+      var url = 'http://www.omdbapi.com/?i='+this.props.movie.imdbID+'&plot=short&r=json',
+      _this = this;
+      if(this.state.additionalDetails === null) {
+        this.setState({loading: true});
+        requestMDB(url)
+        .then(function(response) {
+          console.log(response);
+          _this.setState({
+            showDetails: true,
+            loading: false,
+            additionalDetails: response,
+          });
+        });
+      } else if (this.state.additionalDetails !== null) {
+        this.setState({showDetails: true});
+      }
+    }
+  },
+  toggleDetails: function() {
+    console.log("toggle");
+    this.setState({showDetails: !this.state.showDetails});
+  },
+  render: function() {
+    if(this.state.loading) {
+      return (
+        <div className="search_result_entry loading">
+          <p>{this.props.movie.Title}</p>
+        </div>
+      )
+    }
+    if(this.state.showDetails && this.state.additionalDetails !== null) {
+      //thumbnail, year, name, rating, Genre and a short description ( Plot )
+      return (
+        <div className="search_result_entry additionalDetails" onClick={this.toggleDetails}>
+          <p>{this.props.movie.Year}</p>
+          <p>{this.props.movie.Title}</p>
+          <p>{this.state.additionalDetails.imdbRating}</p>
+          <p>{this.state.additionalDetails.Genre}</p>
+          <p>{this.state.additionalDetails.Plot}</p>
+        </div>
+      )
+    } else {
+      return (
+        <div className="search_result_entry" onClick={this.onClick}>
+          <p>{this.props.movie.Title}</p>
+        </div>
+      )
+    }
   }
 });
 
@@ -169,6 +232,32 @@ var Mainframe = React.createClass({
     )
   }
 });
+
+function requestMDB(url) {
+  var promise = new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest(),
+    proxy = "http://cors-anywhere.herokuapp.com/" + url;
+    xhr.open('GET', proxy+url, true);
+    xhr.send();
+    console.log("request: ", url);
+    xhr.addEventListener("readystatechange", processRequest, false);
+    function processRequest(e) {
+      if(e.srcElement.readyState === 4 && e.srcElement.status === 200) {
+        var response = JSON.parse(e.srcElement.response);
+        if(response.Response === "True") {
+          console.log("response for: ", url, response);
+          resolve(response);
+        } else {
+          console.warn("http error 2", response.Response, e);
+          reject();
+        }
+      } else {
+        console.warn("http error 1", e.srcElement.readyState, e.srcElement.status, e);
+      }
+    }
+  });
+  return promise;
+}
 
 var initOnDeviceReady = function() {
   console.log('Device is ready');
