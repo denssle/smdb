@@ -1,0 +1,47 @@
+.bottom_menu {
+  position: absolute;
+  bottom: 0;
+  text-align: center;
+  width: 100%;
+  background: lightblue;
+  padding-top: 5%;
+}
+
+.bottom_button {
+  display: inline-block;
+  border: solid black;
+  border-radius: 15%;
+  padding: 1%;
+  margin-left: 10%;
+  margin-right: 10%;
+  width: 50px;
+  height: 50px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  margin-bottom: 5%;
+}
+
+.clicked {
+  background-color: white;
+}
+
+.search_button{
+  background-image: url(../img/search.png);
+}
+
+.favorites_button {
+  background-image: url(../img/like.png);
+}
+
+.search_bar_form {
+  text-align: center;
+  padding: 3%;
+  background: lightblue;
+  width: 100%;
+}
+
+.search_bar{
+  width: 85%;
+  padding: 3%;
+  border: solid black;
+}
