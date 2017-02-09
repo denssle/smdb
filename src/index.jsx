@@ -68,6 +68,7 @@ var SearchResultList = React.createClass({
         movie.fav = false;
         if(ls.isFavorite(movie.imdbID)) {
           movie = ls.isFavorite(movie.imdbID);
+          console.log("is fav", movie);
           movie.fav = true;
         }
         search_list.push(<SearchResultEntry key={movie.imdbID} movie_data={movie}/>);
@@ -153,11 +154,11 @@ var SearchResultEntry = React.createClass({
     console.log("toggle fav");
     var movie = this.state.movie;
     if(this.state.movie.fav) {
-      ls.removeFavorite(movie.imdbID);
       movie.fav = false;
+      ls.removeFavorite(movie.imdbID);
     } else {
-      ls.addFavorite(movie);
       movie.fav = true;
+      ls.addFavorite(movie);
     }
     this.setState({movie: this.updateMovie(movie)});
   },
@@ -200,11 +201,42 @@ var SearchResultEntry = React.createClass({
 });
 
 var Favorites = React.createClass({
+  getInitialState: function(){
+    var favorites = ls.getFavorites(),
+    favorites_list = [];
+    for(var id in favorites) {
+      favorites_list.push(favorites[id]);
+    }
+    return {
+      favorites_list: favorites_list
+    };
+  },
   render: function() {
-    return (
-      <div>
-        <p>Favorites</p>
-      </div>
+    var favorites = this.state.favorites_list;
+    if(favorites.length === 0) {
+      return (
+        <div className="no_favorites">
+          <p>No favorites.</p>
+        </div>
+      )
+    } else {
+      var favoritesEntries = [];
+      for(var i=0; i<favorites.length; i++) {
+        favoritesEntries.push(<FavoritEntry movie={favorites[i]} key={favorites[i].imdbID} />);
+      }
+      return (
+        <div className="favorites_entries">
+          {favoritesEntries}
+        </div>
+      )
+    }
+  }
+});
+
+var FavoritEntry = React.createClass({
+  render: function() {
+    return(
+      <div className="favorite_entry">{this.props.movie.Title}</div>
     )
   }
 });
@@ -320,17 +352,20 @@ var ls = {
     }
   },
   addFavorite: function(movie) {
-    console.log("add fav", movie);
+    console.log("add fav", movie.Title);
     this.favorites[movie.imdbID] = movie;
     this.save();
   },
   removeFavorite: function(id) {
     console.log("removie fav", id, this.favorites.id);
-    delete this.favorites.id
+    delete this.favorites[id];
     this.save();
   },
   isFavorite: function(id) {
-    return this.favorites.id;
+    return this.favorites[id];
+  },
+  getFavorites: function() {
+    return this.favorites;
   }
 }
 
