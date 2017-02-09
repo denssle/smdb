@@ -37,7 +37,8 @@ var Search = React.createClass({
           search_result: response
         });
       }
-    }).catch(function () {
+    }).catch(function (e) {
+      console.log(e);
       _this.setState({
         searching: false
       });
@@ -69,7 +70,13 @@ var SearchResultList = React.createClass({
           result_list = result.Search;
       search_list = [];
       for (var i = 0; i < result_list.length; i++) {
-        search_list.push(React.createElement(SearchResultEntry, { key: result_list[i].imdbID, movie: result_list[i] }));
+        var movie = result_list[i];
+        movie.fav = false;
+        if (ls.isFavorite(movie.imdbID)) {
+          movie = ls.isFavorite(movie.imdbID);
+          movie.fav = true;
+        }
+        search_list.push(React.createElement(SearchResultEntry, { key: movie.imdbID, movie_data: movie }));
       }
       return search_list;
     } else {
@@ -116,31 +123,59 @@ var SearchResultEntry = React.createClass({
     return {
       showDetails: false,
       loading: false,
-      additionalDetails: null
+      additionalDetails: false,
+      movie: {}
     };
   },
-  onClick: function () {
+  componentWillMount: function () {
+    this.setState({
+      movie: this.updateMovie(this.props.movie_data)
+    });
+  },
+  updateMovie(data) {
+    var movie = this.state.movie;
+    for (var item in data) {
+      movie[item] = data[item];
+    }
+    return movie;
+  },
+  loadDetails: function () {
     if (!this.state.loading) {
-      var url = 'http://www.omdbapi.com/?i=' + this.props.movie.imdbID + '&plot=short&r=json',
+      var url = 'http://www.omdbapi.com/?i=' + this.state.movie.imdbID + '&plot=short&r=json',
           _this = this;
-      if (this.state.additionalDetails === null) {
+      if (!this.state.movie.additionalDetails) {
         this.setState({ loading: true });
         requestMDB(url).then(function (response) {
           console.log(response);
+          response.additionalDetails = true;
           _this.setState({
             showDetails: true,
             loading: false,
-            additionalDetails: response
+            movie: _this.updateMovie(response)
           });
+        }).catch(function (e) {
+          _this.setState({ loading: false });
         });
-      } else if (this.state.additionalDetails !== null) {
+      } else {
         this.setState({ showDetails: true });
       }
     }
   },
   toggleDetails: function () {
-    console.log("toggle");
+    console.log("toggle details");
     this.setState({ showDetails: !this.state.showDetails });
+  },
+  toggleFavorite: function () {
+    console.log("toggle fav");
+    var movie = this.state.movie;
+    if (this.state.movie.fav) {
+      ls.removeFavorite(movie.imdbID);
+      movie.fav = false;
+    } else {
+      ls.addFavorite(movie);
+      movie.fav = true;
+    }
+    this.setState({ movie: this.updateMovie(movie) });
   },
   render: function () {
     if (this.state.loading) {
@@ -150,49 +185,66 @@ var SearchResultEntry = React.createClass({
         React.createElement(
           "p",
           null,
-          this.props.movie.Title
+          this.state.movie.Title
         )
       );
     }
-    if (this.state.showDetails && this.state.additionalDetails !== null) {
-      //thumbnail, year, name, rating, Genre and a short description ( Plot )
+    console.log("render", this.state.showDetails, this.state.movie.additionalDetails);
+    if (this.state.showDetails && this.state.movie.additionalDetails) {
+      //thumbnail, year, name, rating, Genre and a short description ( Plot ) ❤
+      var fav_classname = "details_favorite";
+      if (this.state.movie.fav) {
+        fav_classname += " activ_fav";
+      }
       return React.createElement(
         "div",
-        { className: "search_result_entry additionalDetails", onClick: this.toggleDetails },
+        { className: "search_result_entry additionalDetails" },
+        React.createElement("img", { className: "details_img", src: this.state.movie.Poster, alt: "loading image...", onClick: this.toggleDetails }),
         React.createElement(
-          "p",
-          null,
-          this.props.movie.Year
+          "div",
+          { className: "details_description_block" },
+          React.createElement(
+            "div",
+            { className: fav_classname, onClick: this.toggleFavorite },
+            "\u2764"
+          ),
+          React.createElement(
+            "div",
+            { className: "details_title", onClick: this.toggleDetails },
+            this.state.movie.Title
+          ),
+          React.createElement(
+            "div",
+            { className: "details_year", onClick: this.toggleDetails },
+            this.state.movie.Year
+          ),
+          React.createElement(
+            "div",
+            { className: "details_genre", onClick: this.toggleDetails },
+            "Genre: ",
+            this.state.movie.Genre
+          ),
+          React.createElement(
+            "div",
+            { className: "details_rating", onClick: this.toggleDetails },
+            "imdb Rating: ",
+            this.state.movie.imdbRating
+          )
         ),
         React.createElement(
-          "p",
-          null,
-          this.props.movie.Title
-        ),
-        React.createElement(
-          "p",
-          null,
-          this.state.additionalDetails.imdbRating
-        ),
-        React.createElement(
-          "p",
-          null,
-          this.state.additionalDetails.Genre
-        ),
-        React.createElement(
-          "p",
-          null,
-          this.state.additionalDetails.Plot
+          "div",
+          { className: "details_plot", onClick: this.toggleDetails },
+          this.state.movie.Plot
         )
       );
     } else {
       return React.createElement(
         "div",
-        { className: "search_result_entry", onClick: this.onClick },
+        { className: "search_result_entry", onClick: this.loadDetails },
         React.createElement(
           "p",
           null,
-          this.props.movie.Title
+          this.state.movie.Title
         )
       );
     }
@@ -292,26 +344,53 @@ function requestMDB(url) {
     console.log("request: ", url);
     xhr.addEventListener("readystatechange", processRequest, false);
     function processRequest(e) {
-      if (e.srcElement.readyState === 4 && e.srcElement.status === 200) {
-        var response = JSON.parse(e.srcElement.response);
-        if (response.Response === "True") {
+      if (e.srcElement.readyState === 4) {
+        if (e.srcElement.status === 200) {
+          var response = JSON.parse(e.srcElement.response);
           console.log("response for: ", url, response);
           resolve(response);
         } else {
-          console.warn("http error 2", response.Response, e);
-          reject();
+          console.warn("http error", e.srcElement.status, e);
+          reject(e.srcElement.status);
         }
-      } else {
-        console.warn("http error 1", e.srcElement.readyState, e.srcElement.status, e);
       }
     }
   });
   return promise;
 }
 
-var initOnDeviceReady = function () {
+function initOnDeviceReady() {
   console.log('Device is ready');
+  ls.load();
   ReactDOM.render(React.createElement(Mainframe, null), document.getElementById('root'));
+};
+
+var ls = {
+  favorites: {},
+  localStorageKey: "smdb",
+  save: function () {
+    localStorage.setItem(this.localStorageKey, JSON.stringify(this.favorites));
+  },
+  load: function () {
+    var data = JSON.parse(localStorage.getItem(this.localStorageKey));
+    console.log("loaded: ", data);
+    if (data !== null) {
+      this.favorites = data;
+    }
+  },
+  addFavorite: function (movie) {
+    console.log("add fav", movie);
+    this.favorites[movie.imdbID] = movie;
+    this.save();
+  },
+  removeFavorite: function (id) {
+    console.log("removie fav", id, this.favorites.id);
+    delete this.favorites.id;
+    this.save();
+  },
+  isFavorite: function (id) {
+    return this.favorites.id;
+  }
 };
 
 document.addEventListener('deviceready', initOnDeviceReady.bind(this), false);

@@ -28,17 +28,15 @@ var Search = React.createClass({
   requestMovies: function(title, page) {
     var url = 'www.omdbapi.com/?s='+title+'&r=json&page='+page,
     _this = this;
-    requestMDB(url)
-    .then(function(response) {
-        if(title === _this.state.searching_title) {
-          _this.setState({
-            searching: false,
-            search_result: response
-          });
-        }
+    requestMDB(url).then(function(response) {
+      if(title === _this.state.searching_title) {
+        _this.setState({
+          searching: false,
+          search_result: response
+        });
       }
-    )
-    .catch(function(){
+    }).catch(function(e) {
+      console.log(e);
       _this.setState({
         searching: false
       });
@@ -66,7 +64,13 @@ var SearchResultList = React.createClass({
       result_list = result.Search
       search_list = [];
       for(var i = 0; i < result_list.length; i++) {
-        search_list.push(<SearchResultEntry key={result_list[i].imdbID} movie={result_list[i]}/>);
+        var movie = result_list[i];
+        movie.fav = false;
+        if(ls.isFavorite(movie.imdbID)) {
+          movie = ls.isFavorite(movie.imdbID);
+          movie.fav = true;
+        }
+        search_list.push(<SearchResultEntry key={movie.imdbID} movie_data={movie}/>);
       }
       return search_list
     } else {
@@ -103,56 +107,92 @@ var SearchResultEntry = React.createClass({
     return {
       showDetails: false,
       loading: false,
-      additionalDetails: null
+      additionalDetails: false,
+      movie: {}
     };
   },
-  onClick: function() {
+  componentWillMount: function() {
+    this.setState({
+      movie: this.updateMovie(this.props.movie_data)
+    });
+  },
+  updateMovie(data) {
+    var movie = this.state.movie;
+    for(var item in data) {
+      movie[item] = data[item];
+    }
+    return movie;
+  },
+  loadDetails: function() {
     if(!this.state.loading) {
-      var url = 'http://www.omdbapi.com/?i='+this.props.movie.imdbID+'&plot=short&r=json',
+      var url = 'http://www.omdbapi.com/?i='+this.state.movie.imdbID+'&plot=short&r=json',
       _this = this;
-      if(this.state.additionalDetails === null) {
+      if(!this.state.movie.additionalDetails) {
         this.setState({loading: true});
-        requestMDB(url)
-        .then(function(response) {
+        requestMDB(url).then(function(response) {
           console.log(response);
+          response.additionalDetails = true;
           _this.setState({
             showDetails: true,
             loading: false,
-            additionalDetails: response,
+            movie: _this.updateMovie(response),
           });
+        }).catch(function(e) {
+          _this.setState({loading: false});
         });
-      } else if (this.state.additionalDetails !== null) {
+      } else {
         this.setState({showDetails: true});
       }
     }
   },
   toggleDetails: function() {
-    console.log("toggle");
+    console.log("toggle details");
     this.setState({showDetails: !this.state.showDetails});
+  },
+  toggleFavorite: function() {
+    console.log("toggle fav");
+    var movie = this.state.movie;
+    if(this.state.movie.fav) {
+      ls.removeFavorite(movie.imdbID);
+      movie.fav = false;
+    } else {
+      ls.addFavorite(movie);
+      movie.fav = true;
+    }
+    this.setState({movie: this.updateMovie(movie)});
   },
   render: function() {
     if(this.state.loading) {
       return (
         <div className="search_result_entry loading">
-          <p>{this.props.movie.Title}</p>
+          <p>{this.state.movie.Title}</p>
         </div>
       )
     }
-    if(this.state.showDetails && this.state.additionalDetails !== null) {
-      //thumbnail, year, name, rating, Genre and a short description ( Plot )
+    console.log("render", this.state.showDetails, this.state.movie.additionalDetails);
+    if(this.state.showDetails && this.state.movie.additionalDetails) {
+      //thumbnail, year, name, rating, Genre and a short description ( Plot ) ❤
+      var fav_classname = "details_favorite";
+      if(this.state.movie.fav) {
+        fav_classname += " activ_fav";
+      }
       return (
-        <div className="search_result_entry additionalDetails" onClick={this.toggleDetails}>
-          <p>{this.props.movie.Year}</p>
-          <p>{this.props.movie.Title}</p>
-          <p>{this.state.additionalDetails.imdbRating}</p>
-          <p>{this.state.additionalDetails.Genre}</p>
-          <p>{this.state.additionalDetails.Plot}</p>
+        <div className="search_result_entry additionalDetails">
+          <img className="details_img" src={this.state.movie.Poster} alt="loading image..."  onClick={this.toggleDetails}/>
+          <div className="details_description_block">
+            <div className={fav_classname} onClick={this.toggleFavorite}>❤</div>
+            <div className="details_title"  onClick={this.toggleDetails}>{this.state.movie.Title}</div>
+            <div className="details_year"  onClick={this.toggleDetails}>{this.state.movie.Year}</div>
+            <div className="details_genre"  onClick={this.toggleDetails}>Genre: {this.state.movie.Genre}</div>
+            <div className="details_rating"  onClick={this.toggleDetails}>imdb Rating: {this.state.movie.imdbRating}</div>
+          </div>
+          <div className="details_plot"  onClick={this.toggleDetails}>{this.state.movie.Plot}</div>
         </div>
       )
     } else {
       return (
-        <div className="search_result_entry" onClick={this.onClick}>
-          <p>{this.props.movie.Title}</p>
+        <div className="search_result_entry" onClick={this.loadDetails}>
+          <p>{this.state.movie.Title}</p>
         </div>
       )
     }
@@ -242,29 +282,56 @@ function requestMDB(url) {
     console.log("request: ", url);
     xhr.addEventListener("readystatechange", processRequest, false);
     function processRequest(e) {
-      if(e.srcElement.readyState === 4 && e.srcElement.status === 200) {
-        var response = JSON.parse(e.srcElement.response);
-        if(response.Response === "True") {
+      if(e.srcElement.readyState === 4) {
+        if(e.srcElement.status === 200) {
+          var response = JSON.parse(e.srcElement.response);
           console.log("response for: ", url, response);
           resolve(response);
         } else {
-          console.warn("http error 2", response.Response, e);
-          reject();
+          console.warn("http error", e.srcElement.status, e);
+          reject(e.srcElement.status);
         }
-      } else {
-        console.warn("http error 1", e.srcElement.readyState, e.srcElement.status, e);
       }
     }
   });
   return promise;
 }
 
-var initOnDeviceReady = function() {
+function initOnDeviceReady() {
   console.log('Device is ready');
+  ls.load();
   ReactDOM.render(
     <Mainframe />,
     document.getElementById('root')
   );
 };
+
+var ls = {
+  favorites: {},
+  localStorageKey: "smdb",
+  save: function() {
+    localStorage.setItem(this.localStorageKey, JSON.stringify(this.favorites));
+  },
+  load: function() {
+    var data = JSON.parse(localStorage.getItem(this.localStorageKey));
+    console.log("loaded: ", data);
+    if(data !== null) {
+      this.favorites = data;
+    }
+  },
+  addFavorite: function(movie) {
+    console.log("add fav", movie);
+    this.favorites[movie.imdbID] = movie;
+    this.save();
+  },
+  removeFavorite: function(id) {
+    console.log("removie fav", id, this.favorites.id);
+    delete this.favorites.id
+    this.save();
+  },
+  isFavorite: function(id) {
+    return this.favorites.id;
+  }
+}
 
 document.addEventListener('deviceready', initOnDeviceReady.bind(this), false);
