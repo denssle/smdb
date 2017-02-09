@@ -52,7 +52,7 @@ var Search = React.createClass({
     var totalPages = Math.ceil(this.state.search_result.totalResults / 10),
     nextpage = this.state.page +1;
     console.log("nextPage", nextpage, totalPages, this.state.search_result.totalResults);
-    if(nextpage < totalPages) {
+    if(nextpage < totalPages && !this.state.searching) {
       this.setState({searching: true});
       this.requestMovies(this.state.searching_title, nextpage);
     }
@@ -60,7 +60,7 @@ var Search = React.createClass({
   previousPage: function() {
     var previouspage = this.state.page -1;
     console.log("previousPage", previouspage);
-    if(previouspage > 0) {
+    if(previouspage > 0 && !this.state.searching) {
       this.setState({searching: true});
       this.requestMovies(this.state.searching_title, previouspage);
     }
@@ -132,6 +132,7 @@ var SearchResultList = React.createClass({
         nextPage={this.props.nextPage}
         previousPage={this.props.previousPage}
         totalResults={this.props.search_result.totalResults}
+        searching={this.props.searching}
         key="paginationButtons"/>);
     } else {
       return null;
@@ -215,7 +216,6 @@ var SearchResultEntry = React.createClass({
         </div>
       )
     }
-    console.log("render", this.state.showDetails, this.state.movie.additionalDetails);
     if(this.state.showDetails && this.state.movie.additionalDetails) {
       var fav_classname = "details_favorite";
       if(this.state.movie.fav) {
@@ -246,18 +246,22 @@ var SearchResultEntry = React.createClass({
 
 var PaginationButtons = React.createClass({
   getPreviousPageButton: function() {
-    if(this.props.page > 1) {
+    if(this.props.page > 1 && !this.props.searching) {
       return (
         <div className="previous_page_button" onClick={this.props.previousPage}> ← </div>
       )
     } else {
-      return null;
+      return (<div className="previous_page_button inaktiv"> ← </div>)
     }
   },
   getNextPageButton: function() {
-    return(
-      <div className="next_page_button" onClick={this.props.nextPage}> → </div>
-    );
+    if(!this.props.searching) {
+      return(
+        <div className="next_page_button" onClick={this.props.nextPage}> → </div>
+      );
+    } else {
+      return (<div className="next_page_button inaktiv"> → </div>)
+    }
   },
   render: function() {
     var page = this.props.page,

@@ -135,6 +135,10 @@
   border-radius: 15%;
 }
 
+.inaktiv {
+  background-color: grey;
+}
+
 .favorites_entries {
   margin-bottom: 10%
 }

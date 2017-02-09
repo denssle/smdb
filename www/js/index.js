@@ -54,7 +54,7 @@ var Search = React.createClass({
     var totalPages = Math.ceil(this.state.search_result.totalResults / 10),
         nextpage = this.state.page + 1;
     console.log("nextPage", nextpage, totalPages, this.state.search_result.totalResults);
-    if (nextpage < totalPages) {
+    if (nextpage < totalPages && !this.state.searching) {
       this.setState({ searching: true });
       this.requestMovies(this.state.searching_title, nextpage);
     }
@@ -62,7 +62,7 @@ var Search = React.createClass({
   previousPage: function () {
     var previouspage = this.state.page - 1;
     console.log("previousPage", previouspage);
-    if (previouspage > 0) {
+    if (previouspage > 0 && !this.state.searching) {
       this.setState({ searching: true });
       this.requestMovies(this.state.searching_title, previouspage);
     }
@@ -144,6 +144,7 @@ var SearchResultList = React.createClass({
         nextPage: this.props.nextPage,
         previousPage: this.props.previousPage,
         totalResults: this.props.search_result.totalResults,
+        searching: this.props.searching,
         key: "paginationButtons" });
     } else {
       return null;
@@ -242,7 +243,6 @@ var SearchResultEntry = React.createClass({
         )
       );
     }
-    console.log("render", this.state.showDetails, this.state.movie.additionalDetails);
     if (this.state.showDetails && this.state.movie.additionalDetails) {
       var fav_classname = "details_favorite";
       if (this.state.movie.fav) {
@@ -307,22 +307,34 @@ var PaginationButtons = React.createClass({
   displayName: "PaginationButtons",
 
   getPreviousPageButton: function () {
-    if (this.props.page > 1) {
+    if (this.props.page > 1 && !this.props.searching) {
       return React.createElement(
         "div",
         { className: "previous_page_button", onClick: this.props.previousPage },
         " \u2190 "
       );
     } else {
-      return null;
+      return React.createElement(
+        "div",
+        { className: "previous_page_button inaktiv" },
+        " \u2190 "
+      );
     }
   },
   getNextPageButton: function () {
-    return React.createElement(
-      "div",
-      { className: "next_page_button", onClick: this.props.nextPage },
-      " \u2192 "
-    );
+    if (!this.props.searching) {
+      return React.createElement(
+        "div",
+        { className: "next_page_button", onClick: this.props.nextPage },
+        " \u2192 "
+      );
+    } else {
+      return React.createElement(
+        "div",
+        { className: "next_page_button inaktiv" },
+        " \u2192 "
+      );
+    }
   },
   render: function () {
     var page = this.props.page,
