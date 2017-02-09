@@ -34,16 +34,36 @@
 }
 
 .search_bar_form {
-  text-align: center;
   padding: 3%;
   background: lightblue;
   width: 95%;
 }
 
 .search_bar{
-  width: 85%;
+  width: 75%;
   padding: 3%;
   border: solid black;
+  margin-right: 5%;
+}
+
+.search_bar_button {
+  background-image: url(../img/search.png);
+  width: 32px;
+  height: 32px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  float: right;
+  border: solid black;
+  border-radius: 15%;
+  background-color: white;
+}
+
+.search_status{
+  text-align: center;
+}
+
+.search_list_entries{
+  margin-bottom: 30%;
 }
 
 .search_result_entry {

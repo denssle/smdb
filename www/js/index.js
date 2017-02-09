@@ -12,19 +12,22 @@ var Search = React.createClass({
       searching_title: "",
       original_title: "",
       search_result: null,
-      page: 1
+      page: 1,
+      text: ""
     };
   },
   handleInputChange: function (evt) {
-    console.log("TEXT", evt.target.value);
-    var text = evt.target.value,
-        searching_title = text.replace(/ /g, "+");
+    this.setState({ text: evt.target.value });
+  },
+  startSearch: function (e) {
+    e.preventDefault();
+    console.log("start search");
+    var searching_title = this.state.text.replace(/ /g, "+");
     this.requestMovies(searching_title, this.state.page);
     this.setState({
       searching: true,
       searching_title: searching_title,
-      original_title: text,
-      search_result: null
+      original_title: this.state.text
     });
   },
   requestMovies: function (title, page) {
@@ -37,11 +40,9 @@ var Search = React.createClass({
           search_result: response
         });
       }
-    }).catch(function (e) {
-      console.log(e);
-      _this.setState({
-        searching: false
-      });
+    }).catch(function () {
+      console.log("catched error");
+      _this.setState({ searching: false });
     });
   },
   render: function () {
@@ -50,8 +51,13 @@ var Search = React.createClass({
       null,
       React.createElement(
         "form",
-        { className: "search_bar_form" },
-        React.createElement("input", { type: "text", onChange: this.handleInputChange, className: "search_bar" })
+        { className: "search_bar_form", onSubmit: this.startSearch },
+        React.createElement("input", { type: "text", onChange: this.handleInputChange, className: "search_bar" }),
+        React.createElement(
+          "div",
+          { className: "search_bar_button", onClick: this.startSearch },
+          " "
+        )
       ),
       React.createElement(SearchResultList, {
         searching: this.state.searching,
@@ -84,31 +90,32 @@ var SearchResultList = React.createClass({
       return null;
     }
   },
-  createTitle: function () {
+  createStatus: function () {
     var text = "...",
+        searching = this.props.searching,
         result = this.props.search_result,
         title = this.props.original_title;
 
-    if (this.props.searching) {
-      text = "searching";
+    if (searching) {
+      text = "searching...";
     }
-    if (title && !result) {
-      text = "searching for " + title;
+    if (title && !result && searching) {
+      text = "searching for " + title + "...";
     }
     return text;
   },
   render: function () {
     return React.createElement(
       "div",
-      { className: "search_result" },
+      { className: "createStatus" },
       React.createElement(
         "div",
-        null,
-        this.createTitle()
+        { className: "search_status" },
+        this.createStatus()
       ),
       React.createElement(
         "div",
-        null,
+        { className: "search_list_entries" },
         this.createSearchEntries()
       )
     );
@@ -118,8 +125,6 @@ var SearchResultList = React.createClass({
 var SearchResultEntry = React.createClass({
   displayName: "SearchResultEntry",
 
-  /* movie, Poster, Title, Type, Year, imdbID
-  */
   getInitialState: function () {
     return {
       showDetails: false,
