@@ -90,3 +90,39 @@
 .details_year{
   font-style: italic;
 }
+
+.favorites_entries {
+  margin-bottom: 10%
+}
+
+.favorite_entry {
+  padding: 5%;
+  border: solid black;
+  margin-bottom: 30%;
+}
+
+.favorite_entry_head {
+  padding: 1%;
+  display: inline-block;
+}
+
+.favorite_entry_people {
+  padding: 1%;
+}
+
+.favorite_entry_rating{
+  padding: 1%;
+}
+
+.favorite_entry_misc {
+  padding: 1%;
+}
+
+.favorite_entry_plot{
+  padding: 1%;
+}
+
+.underline{
+  text-decoration: underline;
+  font-style:italic;
+}

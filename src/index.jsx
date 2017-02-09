@@ -202,14 +202,20 @@ var SearchResultEntry = React.createClass({
 
 var Favorites = React.createClass({
   getInitialState: function(){
+    return {
+      favorites_list: this.getFavoritesList()
+    };
+  },
+  getFavoritesList: function() {
     var favorites = ls.getFavorites(),
     favorites_list = [];
     for(var id in favorites) {
       favorites_list.push(favorites[id]);
     }
-    return {
-      favorites_list: favorites_list
-    };
+    return favorites_list;
+  },
+  updateFavorites: function() {
+    this.setState({favorites_list: this.getFavoritesList()});
   },
   render: function() {
     var favorites = this.state.favorites_list;
@@ -222,7 +228,8 @@ var Favorites = React.createClass({
     } else {
       var favoritesEntries = [];
       for(var i=0; i<favorites.length; i++) {
-        favoritesEntries.push(<FavoritEntry movie={favorites[i]} key={favorites[i].imdbID} />);
+        var movie = favorites[i];
+        favoritesEntries.push(<FavoritEntry movie={movie} key={movie.imdbID} updateFavorites={this.updateFavorites}/>);
       }
       return (
         <div className="favorites_entries">
@@ -234,9 +241,41 @@ var Favorites = React.createClass({
 });
 
 var FavoritEntry = React.createClass({
+  toggleFavorite: function() {
+    console.log("toggle toggle");
+    ls.removeFavorite(this.props.movie.imdbID);
+    this.props.updateFavorites();
+  },
   render: function() {
+    console.log(this.props.movie);
+    var movie = this.props.movie;
     return(
-      <div className="favorite_entry">{this.props.movie.Title}</div>
+      <div className="favorite_entry">
+        <img className="details_img" src={movie.Poster} alt="loading image..."/>
+        <div className="favorite_entry_head">
+          <div className="details_favorite activ_fav" onClick={this.toggleFavorite}>❤</div>
+          <div >{movie.Title}</div>
+          <div ><div className="underline">Runtime: </div>{movie.Runtime}</div>
+          <div ><div className="underline">Released: </div>{movie.Released}</div>
+          <div >{movie.Country}</div>
+        </div>
+        <div className="favorite_entry_people">
+          <div ><div className="underline">Actors: </div>{movie.Actors}</div>
+          <div ><div className="underline">Director: </div>{movie.Director}</div>
+          <div ><div className="underline">Writer: </div>{movie.Writer}</div>
+        </div>
+        <div className="favorite_entry_rating">
+          <div ><div className="underline">Awards:</div>{movie.Awards}</div>
+          <div ><div className="underline">Metascore:</div>{movie.Metascore}</div>
+          <div ><div className="underline">imdbRating:</div>{movie.imdbRating} " / " {movie.imdbVotes} imdbVotes</div>
+        </div>
+        <div className="favorite_entry_misc">
+          <div ><div className="underline">Genre:</div>{movie.Genre}</div>
+          <div ><div className="underline">Language:</div>{movie.Language}</div>
+          <div ><div className="underline">Rated:</div>{movie.Rated}</div>
+        </div>
+        <div className="favorite_entry_plot">{movie.Plot}</div>
+      </div>
     )
   }
 });

@@ -256,14 +256,20 @@ var Favorites = React.createClass({
   displayName: "Favorites",
 
   getInitialState: function () {
+    return {
+      favorites_list: this.getFavoritesList()
+    };
+  },
+  getFavoritesList: function () {
     var favorites = ls.getFavorites(),
         favorites_list = [];
     for (var id in favorites) {
       favorites_list.push(favorites[id]);
     }
-    return {
-      favorites_list: favorites_list
-    };
+    return favorites_list;
+  },
+  updateFavorites: function () {
+    this.setState({ favorites_list: this.getFavoritesList() });
   },
   render: function () {
     var favorites = this.state.favorites_list;
@@ -280,7 +286,8 @@ var Favorites = React.createClass({
     } else {
       var favoritesEntries = [];
       for (var i = 0; i < favorites.length; i++) {
-        favoritesEntries.push(React.createElement(FavoritEntry, { movie: favorites[i], key: favorites[i].imdbID }));
+        var movie = favorites[i];
+        favoritesEntries.push(React.createElement(FavoritEntry, { movie: movie, key: movie.imdbID, updateFavorites: this.updateFavorites }));
       }
       return React.createElement(
         "div",
@@ -294,11 +301,167 @@ var Favorites = React.createClass({
 var FavoritEntry = React.createClass({
   displayName: "FavoritEntry",
 
+  toggleFavorite: function () {
+    console.log("toggle toggle");
+    ls.removeFavorite(this.props.movie.imdbID);
+    this.props.updateFavorites();
+  },
   render: function () {
+    console.log(this.props.movie);
+    var movie = this.props.movie;
     return React.createElement(
       "div",
       { className: "favorite_entry" },
-      this.props.movie.Title
+      React.createElement("img", { className: "details_img", src: movie.Poster, alt: "loading image..." }),
+      React.createElement(
+        "div",
+        { className: "favorite_entry_head" },
+        React.createElement(
+          "div",
+          { className: "details_favorite activ_fav", onClick: this.toggleFavorite },
+          "\u2764"
+        ),
+        React.createElement(
+          "div",
+          null,
+          movie.Title
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Runtime: "
+          ),
+          movie.Runtime
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Released: "
+          ),
+          movie.Released
+        ),
+        React.createElement(
+          "div",
+          null,
+          movie.Country
+        )
+      ),
+      React.createElement(
+        "div",
+        { className: "favorite_entry_people" },
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Actors: "
+          ),
+          movie.Actors
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Director: "
+          ),
+          movie.Director
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Writer: "
+          ),
+          movie.Writer
+        )
+      ),
+      React.createElement(
+        "div",
+        { className: "favorite_entry_rating" },
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Awards:"
+          ),
+          movie.Awards
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Metascore:"
+          ),
+          movie.Metascore
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "imdbRating:"
+          ),
+          movie.imdbRating,
+          " \" / \" ",
+          movie.imdbVotes,
+          " imdbVotes"
+        )
+      ),
+      React.createElement(
+        "div",
+        { className: "favorite_entry_misc" },
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Genre:"
+          ),
+          movie.Genre
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Language:"
+          ),
+          movie.Language
+        ),
+        React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "underline" },
+            "Rated:"
+          ),
+          movie.Rated
+        )
+      ),
+      React.createElement(
+        "div",
+        { className: "favorite_entry_plot" },
+        movie.Plot
+      )
     );
   }
 });
