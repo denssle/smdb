@@ -111,6 +111,30 @@
   font-style: italic;
 }
 
+.pagination_buttons {
+  text-align: center;
+}
+
+.previous_page_button{
+  display: inline-block;
+  margin-right: 5%;
+  border: solid black;
+  padding: 1%;
+  border-radius: 15%;
+}
+
+.pagination_status{
+  display: inline-block;
+}
+
+.next_page_button{
+  display: inline-block;
+  margin-left: 5%;
+  border: solid black;
+  padding: 1%;
+  border-radius: 15%;
+}
+
 .favorites_entries {
   margin-bottom: 10%
 }

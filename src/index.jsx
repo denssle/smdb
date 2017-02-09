@@ -3,6 +3,10 @@ babel --presets react src --out-dir .\www\js
 cordova run browser
 https://www.omdbapi.com/
 */
+
+/*
+  Contains searchbar
+*/
 var Search = React.createClass({
   getInitialState: function(){
     return {
@@ -35,13 +39,31 @@ var Search = React.createClass({
       if(title === _this.state.searching_title) {
         _this.setState({
           searching: false,
-          search_result: response
+          search_result: response,
+          page: page
         });
       }
     }).catch(function() {
       console.log("catched error");
       _this.setState({searching: false});
     })
+  },
+  nextPage: function() {
+    var totalPages = Math.ceil(this.state.search_result.totalResults / 10),
+    nextpage = this.state.page +1;
+    console.log("nextPage", nextpage, totalPages, this.state.search_result.totalResults);
+    if(nextpage < totalPages) {
+      this.setState({searching: true});
+      this.requestMovies(this.state.searching_title, nextpage);
+    }
+  },
+  previousPage: function() {
+    var previouspage = this.state.page -1;
+    console.log("previousPage", previouspage);
+    if(previouspage > 0) {
+      this.setState({searching: true});
+      this.requestMovies(this.state.searching_title, previouspage);
+    }
   },
   render: function() {
     return (
@@ -53,12 +75,18 @@ var Search = React.createClass({
         <SearchResultList
           searching={this.state.searching}
           original_title = {this.state.original_title}
-          search_result={this.state.search_result} />
+          search_result={this.state.search_result}
+          page= {this.state.page}
+          nextPage={this.nextPage}
+          previousPage={this.previousPage}/>
       </div>
     )
   }
 });
 
+/**
+  Contains result and seach status
+*/
 var SearchResultList = React.createClass({
   createSearchEntries: function() {
     if(this.props.search_result !== null) {
@@ -75,24 +103,39 @@ var SearchResultList = React.createClass({
         }
         search_list.push(<SearchResultEntry key={movie.imdbID} movie_data={movie}/>);
       }
+      search_list.push(this.getPaginationButtons());
       return search_list
     } else {
       return null;
     }
   },
-  createStatus: function() {
+  createStatus: function() { // gives feedback
     var text = "...",
     searching = this.props.searching,
     result = this.props.search_result,
     title = this.props.original_title;
-
     if(searching) {
       text = "searching...";
     }
     if(title && !result && searching) {
       text = "searching for " + title+"...";
     }
+    if(result) {
+      text = "we found " + result.totalResults + " movies."
+    }
     return text;
+  },
+  getPaginationButtons: function() {
+    if(this.props.search_result.totalResults > 10) { // we need more than one page
+      return(<PaginationButtons
+        page= {this.props.page}
+        nextPage={this.props.nextPage}
+        previousPage={this.props.previousPage}
+        totalResults={this.props.search_result.totalResults}
+        key="paginationButtons"/>);
+    } else {
+      return null;
+    }
   },
   render: function() {
     return (
@@ -125,6 +168,7 @@ var SearchResultEntry = React.createClass({
     }
     return movie;
   },
+  // Use http to get more details for the clicked movie
   loadDetails: function() {
     if(!this.state.loading) {
       var url = 'http://www.omdbapi.com/?i='+this.state.movie.imdbID+'&plot=short&r=json',
@@ -142,7 +186,7 @@ var SearchResultEntry = React.createClass({
         }).catch(function(e) {
           _this.setState({loading: false});
         });
-      } else {
+      } else { // additionalDetails already loaded
         this.setState({showDetails: true});
       }
     }
@@ -173,7 +217,6 @@ var SearchResultEntry = React.createClass({
     }
     console.log("render", this.state.showDetails, this.state.movie.additionalDetails);
     if(this.state.showDetails && this.state.movie.additionalDetails) {
-      //thumbnail, year, name, rating, Genre and a short description ( Plot ) ❤
       var fav_classname = "details_favorite";
       if(this.state.movie.fav) {
         fav_classname += " activ_fav";
@@ -198,6 +241,34 @@ var SearchResultEntry = React.createClass({
         </div>
       )
     }
+  }
+});
+
+var PaginationButtons = React.createClass({
+  getPreviousPageButton: function() {
+    if(this.props.page > 1) {
+      return (
+        <div className="previous_page_button" onClick={this.props.previousPage}> ← </div>
+      )
+    } else {
+      return null;
+    }
+  },
+  getNextPageButton: function() {
+    return(
+      <div className="next_page_button" onClick={this.props.nextPage}> → </div>
+    );
+  },
+  render: function() {
+    var page = this.props.page,
+    totalResults = Math.ceil(this.props.totalResults / 10);// 10 items / page
+    return(
+      <div className="pagination_buttons">
+        {this.getPreviousPageButton()}
+        <div className="pagination_status">{page} / {totalResults}</div>
+        {this.getNextPageButton()}
+      </div>
+    );
   }
 });
 
@@ -345,6 +416,10 @@ var Mainframe = React.createClass({
   }
 });
 
+/*
+  Send http requests; uses proxy
+*/
+
 function requestMDB(url) {
   var promise = new Promise(function(resolve, reject) {
     var xhr = new XMLHttpRequest(),
@@ -369,15 +444,9 @@ function requestMDB(url) {
   return promise;
 }
 
-function initOnDeviceReady() {
-  console.log('Device is ready');
-  ls.load();
-  ReactDOM.render(
-    <Mainframe />,
-    document.getElementById('root')
-  );
-};
-
+/**
+  Local Storage Interfase
+*/
 var ls = {
   favorites: {},
   localStorageKey: "smdb",
@@ -408,5 +477,17 @@ var ls = {
     return this.favorites;
   }
 }
+
+/*
+  Initiates the application
+*/
+function initOnDeviceReady() {
+  console.log('Device is ready');
+  ls.load();
+  ReactDOM.render(
+    <Mainframe />,
+    document.getElementById('root')
+  );
+};
 
 document.addEventListener('deviceready', initOnDeviceReady.bind(this), false);
